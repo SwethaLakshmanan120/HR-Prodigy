@@ -1,160 +1,109 @@
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Scanner;
 
-class Contact implements Serializable {
-    private String name;
-    private String phoneNumber;
-    private String email;
+public class SudokuSolver {
 
-    public Contact(String name, String phoneNumber, String email) {
-        this.name = name;
-        this.phoneNumber = phoneNumber;
-        this.email = email;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    @Override
-    public String toString() {
-        return "Name: " + name + ", Phone: " + phoneNumber + ", Email: " + email;
-    }
-}
-
-public class ContactManager {
-    private static final String FILE_NAME = "contacts.dat";
-    private ArrayList<Contact> contacts;
-
-    public ContactManager() {
-        contacts = loadContacts();
-    }
-
-    private ArrayList<Contact> loadContacts() {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_NAME))) {
-            return (ArrayList<Contact>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            return new ArrayList<>();
+    // Method to print the Sudoku grid
+    public static void printGrid(int[][] grid) {
+        for (int r = 0; r < 9; r++) {
+            for (int d = 0; d < 9; d++) {
+                System.out.print(grid[r][d] + " ");
+            }
+            System.out.println();
         }
     }
 
-    private void saveContacts() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
-            oos.writeObject(contacts);
-        } catch (IOException e) {
-            System.out.println("Error saving contacts: " + e.getMessage());
-        }
-    }
-
-    public void addContact(String name, String phoneNumber, String email) {
-        contacts.add(new Contact(name, phoneNumber, email));
-        saveContacts();
-    }
-
-    public void viewContacts() {
-        if (contacts.isEmpty()) {
-            System.out.println("No contacts found.");
-        } else {
-            for (int i = 0; i < contacts.size(); i++) {
-                System.out.println((i + 1) + ". " + contacts.get(i));
+    // Method to check if placing a number is valid according to Sudoku rules
+    public static boolean isValid(int[][] grid, int row, int col, int num) {
+        // Check if the number is already in the row
+        for (int x = 0; x < 9; x++) {
+            if (grid[row][x] == num) {
+                return false;
             }
         }
-    }
 
-    public void editContact(int index, String phoneNumber, String email) {
-        if (index >= 0 && index < contacts.size()) {
-            Contact contact = contacts.get(index);
-            contact.setPhoneNumber(phoneNumber);
-            contact.setEmail(email);
-            saveContacts();
-        } else {
-            System.out.println("Invalid contact index.");
+        // Check if the number is already in the column
+        for (int x = 0; x < 9; x++) {
+            if (grid[x][col] == num) {
+                return false;
+            }
         }
-    }
 
-    public void deleteContact(int index) {
-        if (index >= 0 && index < contacts.size()) {
-            contacts.remove(index);
-            saveContacts();
-        } else {
-            System.out.println("Invalid contact index.");
+        // Check if the number is in the 3x3 sub-grid
+        int startRow = row - row % 3;
+        int startCol = col - col % 3;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (grid[i + startRow][j + startCol] == num) {
+                    return false;
+                }
+            }
         }
+
+        return true;
     }
 
-    public static void main(String[] args) {
+    // Method to find an empty location in the grid
+    public static int[] findEmptyLocation(int[][] grid) {
+        for (int row = 0; row < 9; row++) {
+            for (int col = 0; col < 9; col++) {
+                if (grid[row][col] == 0) {
+                    return new int[] {row, col}; // Return the row and column of the empty cell
+                }
+            }
+        }
+        return null; // Return null if no empty cell is found
+    }
+
+    // Method to solve the Sudoku puzzle using backtracking
+    public static boolean solveSudoku(int[][] grid) {
+        int[] emptyLocation = findEmptyLocation(grid);
+        if (emptyLocation == null) {
+            return true; // Puzzle is solved if there are no empty cells
+        }
+
+        int row = emptyLocation[0];
+        int col = emptyLocation[1];
+
+        for (int num = 1; num <= 9; num++) {
+            if (isValid(grid, row, col, num)) {
+                grid[row][col] = num; // Tentatively place the number
+
+                if (solveSudoku(grid)) {
+                    return true; // If the puzzle is solved, return true
+                }
+
+                grid[row][col] = 0; // Backtrack and remove the number
+            }
+        }
+
+        return false; // Trigger backtracking
+    }
+
+    // Method to read a Sudoku grid from user input
+    public static void readGrid(int[][] grid) {
         Scanner scanner = new Scanner(System.in);
-        ContactManager manager = new ContactManager();
-
-        while (true) {
-            System.out.println("\nContact Manager");
-            System.out.println("1. Add Contact");
-            System.out.println("2. View Contacts");
-            System.out.println("3. Edit Contact");
-            System.out.println("4. Delete Contact");
-            System.out.println("5. Exit");
-            System.out.print("Choose an option: ");
-
-            int choice = scanner.nextInt();
-            scanner.nextLine();  // Consume newline
-
-            switch (choice) {
-                case 1:
-                    System.out.print("Enter name: ");
-                    String name = scanner.nextLine();
-                    System.out.print("Enter phone number: ");
-                    String phoneNumber = scanner.nextLine();
-                    System.out.print("Enter email: ");
-                    String email = scanner.nextLine();
-                    manager.addContact(name, phoneNumber, email);
-                    break;
-                case 2:
-                    manager.viewContacts();
-                    break;
-                case 3:
-                    System.out.print("Enter the index of the contact to edit: ");
-                    int editIndex = scanner.nextInt();
-                    scanner.nextLine();  // Consume newline
-                    System.out.print("Enter new phone number: ");
-                    String newPhoneNumber = scanner.nextLine();
-                    System.out.print("Enter new email: ");
-                    String newEmail = scanner.nextLine();
-                    manager.editContact(editIndex - 1, newPhoneNumber, newEmail);
-                    break;
-                case 4:
-                    System.out.print("Enter the index of the contact to delete: ");
-                    int deleteIndex = scanner.nextInt();
-                    manager.deleteContact(deleteIndex - 1);
-                    break;
-                case 5:
-                    System.out.println("Exiting...");
-                    scanner.close();
-                    return;
-                default:
-                    System.out.println("Invalid option. Please try again.");
+        System.out.println("Enter the Sudoku grid (9 rows of 9 numbers, use 0 for empty cells):");
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                grid[i][j] = scanner.nextInt();
             }
         }
     }
+
+    // Main method
+    public static void main(String[] args) {
+        int[][] sudokuGrid = new int[9][9];
+
+        // Read the grid from user input
+        readGrid(sudokuGrid);
+
+        if (solveSudoku(sudokuGrid)) {
+            System.out.println("Sudoku puzzle solved:");
+            printGrid(sudokuGrid);
+        } else {
+            System.out.println("No solution exists.");
+        }
+    }
 }
+
 
